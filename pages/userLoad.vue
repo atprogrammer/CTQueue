@@ -1,0 +1,122 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import config from '@/config';
+import { useRoute } from 'vue-router';
+
+const showModal = ref(false);
+const pdfUrl = ref(null);
+const name = ref('');
+const hasFile = ref(true); // เพิ่ม state เพื่อตรวจสอบว่ามีไฟล์หรือไม่
+
+definePageMeta({ layout: 'admin' });
+
+const route = useRoute();
+
+const LoadFile = async () => {
+    const nationalId = localStorage.getItem('national_id'); // รับค่า nationalId จาก localStorage
+    name.value = localStorage.getItem('name_id'); // รับค่า name จาก localStorage
+
+    if (!nationalId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No national ID found in the request',
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Loading...',
+        text: 'Please wait a moment',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        },
+    });
+
+    try {
+        const response = await axios.get(`${config.apiServer}/documents/${nationalId}`, {
+            responseType: 'blob',
+        });
+
+        const fileBlob = response.data;
+        pdfUrl.value = window.URL.createObjectURL(fileBlob);
+        hasFile.value = true; // มีไฟล์ในระบบ
+
+        Swal.close();
+    } catch (error) {
+        if (error.response && error.response.status === 404) {
+            hasFile.value = false; // ไม่มีไฟล์ในระบบ
+            Swal.fire({
+                icon: 'info',
+                title: 'ไม่พบเอกสาร',
+                text: 'ไม่มีไฟล์ PDF ในระบบสำหรับหมายเลขบัตรประชาชนนี้',
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'Unable to load the document',
+            });
+        }
+        console.error(error.message);
+    }
+};
+
+// ฟังก์ชันดาวน์โหลดไฟล์
+const DownloadFile = () => {
+    const link = document.createElement('a');
+    link.href = pdfUrl.value;
+    link.download = 'document.pdf'; // ตั้งชื่อไฟล์ที่ดาวน์โหลด
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+onMounted(() => {
+    LoadFile();
+});
+</script>
+
+<template>
+    <div class="title text-center">ข้อมูลหนังสือรับรอง
+        การหักภาษี ณ ที่จ่าย ของคุณ {{ name }}</div>
+
+    <!-- แสดงข้อความหากไม่มีไฟล์ในระบบ -->
+    <div v-if="!hasFile" class="p-4 flex justify-center items-center">
+        <div class="text-red-500 text-lg font-semibold">
+            ไม่มีไฟล์ PDF ในระบบสำหรับหมายเลขบัตรประชาชนนี้
+        </div>
+    </div>
+
+    <!-- แสดงปุ่ม "แสดงเอกสาร" หากยังไม่ได้โหลดไฟล์ -->
+    <div v-if="!pdfUrl && hasFile" class="p-4 flex justify-center items-center">
+        <button 
+            class="btn bg-blue-500 hover:bg-blue-600 text-white text-lg font-semibold py-3 px-6 rounded-lg flex items-center gap-2"
+            @click="LoadFile"
+        >
+            <i class="fa-solid fa-download"></i>
+            แสดงเอกสาร
+        </button>
+    </div>
+
+    <!-- แสดงไฟล์ PDF หากมีไฟล์ในระบบ -->
+    <div v-if="pdfUrl && hasFile" class="mt-8">
+        <iframe
+            :src="pdfUrl"
+            class="w-full border rounded-lg"
+            style="height: 600px;"
+            frameborder="0"
+        ></iframe>
+        <div class="flex justify-center mt-4">
+            <button
+                class="btn bg-green-500 hover:bg-green-600 text-white text-lg font-semibold py-3 mt-3 mb-3 px-6 rounded-lg"
+                @click="DownloadFile"
+            >
+                ดาวน์โหลดไฟล์
+            </button>
+        </div>
+    </div>
+</template>
