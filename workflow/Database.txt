@@ -1,0 +1,71 @@
+erDiagram
+    PATIENTS {
+        int patient_id PK
+        string hn "รหัสผู้ป่วย"
+        string first_name
+        string last_name
+        date birth_date
+        string gender
+        string phone
+        int hospital_id FK "โรงพยาบาลต้นทาง"
+    }
+
+    HOSPITALS {
+        int hospital_id PK
+        string name "ชื่อโรงพยาบาล"
+        string address
+        string phone
+    }
+
+    STAFFS {
+        int staff_id PK
+        string username
+        string password
+        string name
+        int hospital_id FK "สังกัดโรงพยาบาล"
+        string role "ตำแหน่ง (admin, doctor, nurse)"
+    }
+
+    APPOINTMENTS {
+        int appointment_id PK
+        int patient_id FK
+        int hospital_id FK "โรงพยาบาลที่นัดตรวจ"
+        int slot_id FK "คิวที่ใช้"
+        date appointment_date
+        string status "รอดำเนินการ, เสร็จสิ้น, ยกเลิก"
+    }
+
+    TRANSFERS {
+        int transfer_id PK
+        int patient_id FK
+        int from_hospital_id FK
+        int to_hospital_id FK
+        date transfer_date
+        string reason
+        string status "รออนุมัติ, อนุมัติแล้ว, ปฏิเสธ"
+    }
+
+    SCAN_RESULTS {
+        int result_id PK
+        int appointment_id FK
+        text result "ผลตรวจ"
+        string image_url "ลิงก์ภาพ CT Scan"
+        date result_date
+    }
+
+    SLOTS {
+        int slot_id PK
+        int hospital_id FK "โรงพยาบาลที่ให้บริการ"
+        date slot_date
+        int max_capacity "จำนวนคิวสูงสุด"
+        int available_slots "จำนวนคิวที่เหลือ"
+    }
+
+    PATIENTS ||--o{ APPOINTMENTS : "มี"
+    PATIENTS ||--o{ TRANSFERS : "มี"
+    HOSPITALS ||--o{ STAFFS : "มี"
+    HOSPITALS ||--o{ APPOINTMENTS : "ให้บริการ"
+    HOSPITALS ||--o{ TRANSFERS : "เป็นต้นทาง/ปลายทาง"
+    APPOINTMENTS ||--o{ SCAN_RESULTS : "มีผลตรวจ"
+    HOSPITALS ||--o{ SLOTS : "กำหนดคิว"
+    SLOTS ||--o{ APPOINTMENTS : "ใช้คิวนี้"
